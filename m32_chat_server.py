@@ -4,14 +4,14 @@
 #
 import socket
 import time
- 
+
 SERVER_IP = "0.0.0.0"
 UDP_PORT = 7373
 CLIENT_TIMEOUT = 300
 MAX_CLIENTS = 10
 KEEPALIVE = 10
 DEBUG = 0
- 
+
 serversock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 serversock.bind((SERVER_IP, UDP_PORT))
 serversock.settimeout(KEEPALIVE)
@@ -34,18 +34,23 @@ def broadcast(data,client):
     serversock.sendto(data, (ip, int(port)))
 
 
-def welcome(client):
+def welcome(client, speed):
   ip,port = client.split(':')
-  serversock.sendto('D\x7a\xa5\x45\x51\x70', (ip, int(port)))		# this is ":hi" at 30wpm
+  msg = 'D' + chr(speed <<2 | 2 ) + '\xa5\x45\x51\x70'
+  serversock.sendto(msg, (ip, int(port)))		# this is ":hi" at speed wpm
   receivers[client] = time.time()
-  debug("New client: %s" % client) 
+  debug("New client: %s" % client)
 
- 
+def reject(client, speed):
+  ip,port = client.split(':')
+  msg = 'D' + chr(speed <<2 | 2 ) + '\xa5\x4a\x61\x91\x94'
+  serversock.sendto(msg, (ip, int(port)))		# this is ":qrl" at speed wpm
+
 while KeyboardInterrupt:
   time.sleep(0.2)						# anti flood
   try:
     data, addr = serversock.recvfrom(64)
-  
+
     client = addr[0] + ':' + str(addr[1])
 
     debug ("\nReceived %s from %s" % (":".join("{:02x}".format(ord(c)) for c in data),client))
@@ -55,10 +60,12 @@ while KeyboardInterrupt:
       receivers[client] = time.time()
     else:
       if data[2:4] == 'T\\':
+        speed = ord(data[1]) >> 2
         if (len(receivers) < MAX_CLIENTS):
           receivers[client] = time.time()
-          welcome(client)
+          welcome(client, speed)
         else:
+          reject(client, speed)
           debug ("ERR: maximum clients reached")
       else:
         debug ("-unknown client, ignoring-")
@@ -74,7 +81,7 @@ while KeyboardInterrupt:
     serversock.close()
     break
     pass
- 
+
 
   # clean clients list
   for c in receivers.items():
@@ -83,4 +90,3 @@ while KeyboardInterrupt:
       serversock.sendto('D\x7a\xa5\x49\x52\x68\x70', (ip, int(port)))		# this is ":bye" at 30wpm
       del receivers[c[0]]
       debug ("Removing expired client %s" % c[0])
-
