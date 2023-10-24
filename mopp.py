@@ -57,3 +57,9 @@ class Mopp:
     def _stripheader(self, msg):
         res = bytes(0x00) + bytes(msg[1] & 3) + msg[2:]
         return res
+
+    def msg_strcmp (self, data_bytes, speed, msg):
+        if self._stripheader(data_bytes) == self._stripheader(self.mopp(speed, msg)):
+            return True
+        else:
+            return False

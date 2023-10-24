@@ -20,8 +20,10 @@ serversock.bind((SERVER_IP, UDP_PORT))
 serversock.settimeout(KEEPALIVE)
 
 receivers = {}
+mopp = Mopp()
 
-serial = 1
+def transmit (data, ip, port):
+  serversock.sendto(data, (ip, int(port)))
 
 def broadcast(data,client):
   for c in receivers.keys():
@@ -30,79 +32,19 @@ def broadcast(data,client):
     logging.debug("Sending to %s" % c)
     ip,port = c.split(':')
 
-    serversock.sendto(data, (ip, int(port)))
-
-
-def str2hex(bytes):
-  #msg = bytes.decode()
-  #hex = ":".join("{:02x}".format(ord(c)) for c in msg)
-  hex = ":".join("{:02x}".format(c) for c in bytes)
-  return hex
-
-def mopp(speed,msg):
-  global serial
-
-  logging.debug("Encoding message with "+str(speed)+" wpm :"+str(msg))
-
-  morse = {
-	"0" : "-----", "1" : ".----", "2" : "..---", "3" : "...--", "4" : "....-", "5" : ".....",
-	"6" : "-....", "7" : "--...", "8" : "---..", "9" : "----.",
-	"a" : ".-", "b" : "-...", "c" : "-.-.", "d" : "-..", "e" : ".", "f" : "..-.", "g" : "--.",
-	"h" : "....", "i" : "..", "j" : ".---", "k" : "-.-", "l" : ".-..", "m" : "--", "n" : "-.",
-	"o" : "---", "p" : ".--.", "q" : "--.-", "r" : ".-.", "s" : "...", "t" : "-", "u" : "..-",
-	"v" : "...-", "w" : ".--", "x" : "-..-", "y" : "-.--", "z" : "--..", "=" : "-...-",
-	"/" : "-..-.", "+" : ".-.-.", "-" : "-....-", "." : ".-.-.-", "," : "--..--", "?" : "..--..",
-	":" : "---...", "!" : "-.-.--", "'" : ".----."
-  }
-
-  m = '01'				# protocol
-  m += bin(serial)[2:].zfill(6)
-  m += bin(speed)[2:].zfill(6)
-
-  for c in msg:
-    if c == " ":
-      continue				# spaces not supported by morserino!
-
-    #logging.debug(c)
-    
-    for b in morse[c.lower()]:
-      if b == '.':
-        m += '01'
-      else:
-        m += '10'
-
-    m += '00'				# EOC
-
-  m = m[0:-2] + '11'			# final EOW
-
-  m = m.ljust(int(8*ceil(len(m)/8.0)),'0')
-
-  res = ''
-  for i in range (0, len(m), 8):
-    res += chr(int(m[i:i+8],2))
-
-  serial += 1
-  return bytes(res,'utf-8')
-
-def stripheader(msg):
-  #logging.debug(msg)
-  #logging.debug(type(msg))
-  #res = chr(0x00) + chr(msg[1] & 3) + msg[2:]
-  res = bytes(0x00) + bytes(msg[1] & 3) + msg[2:]
-  return res
+    transmit (data, ip, port)
 
 def welcome(client, speed):
   ip,port = client.split(':')
   welcome_msg = ':hi '+str(len(receivers))
-  serversock.sendto(mopp(speed, welcome_msg), (ip, int(port)))
+  transmit(mopp.mopp(speed, welcome_msg), ip, port)
   receivers[client] = time.time()
   logging.debug("New client: %s" % client)
 
 def reject(client, speed):
   ip,port = client.split(':')
   bye_msg = ':qrl'
-  serversock.sendto(mopp(speed, bye_msg), (ip, int(port)))
-
+  transmit(mopp.mopp(speed, bye_msg), ip, int(port))
 
 while KeyboardInterrupt:
   time.sleep(0.2)						# anti flood
@@ -110,19 +52,19 @@ while KeyboardInterrupt:
     data_bytes, addr = serversock.recvfrom(64)
     client = addr[0] + ':' + str(addr[1])
     #data = data_bytes.decode()
-    speed = data_bytes[1] >> 2 #ord(data[1]) >> 2
-    logging.debug ("\nReceived %s from %s with %i wpm" % (str2hex(data_bytes),client, speed))
+    speed = data_bytes[1] >> 2 #ord(data[1]) >> 2 # FIXME
+    logging.debug ("\nReceived %s from %s with %i wpm" % (mopp._str2hex(data_bytes),client, speed)) # FIXME
 
     if client in receivers:
-      if stripheader(data_bytes) == stripheader(mopp(MY_WPM,':bye')):
-        serversock.sendto(mopp(speed,':bye'), addr)
+      if mopp.msg_strcmp(data_bytes, MY_WPM, ':bye'):
+        serversock.sendto(mopp.mopp(speed,':bye'), addr) # FIXME
         del receivers[client]
         logging.debug ("Removing client %s on request" % client)
       else:
         broadcast (data_bytes, client)
         receivers[client] = time.time()
     else:
-      if stripheader(data_bytes) == stripheader(mopp(MY_WPM,'hi')):
+      if mopp.msg_strcmp(data_bytes, MY_WPM, 'hi'):
         if (len(receivers) < MAX_CLIENTS):
           receivers[client] = time.time()
           welcome(client, speed)
@@ -149,7 +91,7 @@ while KeyboardInterrupt:
     if c[1] + CLIENT_TIMEOUT < time.time():
       ip,port = c[0].split(':')
       bye_msg = ':bye'
-      serversock.sendto(mopp(MY_WPM, bye_msg), (ip, int(port)))
+      transmit(mopp.mopp(MY_WPM, bye_msg), ip, int(port))
       del receivers[c[0]]
       logging.debug ("Removing expired client %s" % c[0])
  
