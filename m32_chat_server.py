@@ -12,6 +12,7 @@ CLIENT_TIMEOUT = 300
 MAX_CLIENTS = 10
 KEEPALIVE = 10
 DEBUG = 0
+MY_WPM = 20
 
 serversock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 serversock.bind((SERVER_IP, UDP_PORT))
@@ -32,8 +33,9 @@ def broadcast(data,client):
 
 
 def str2hex(bytes):
-  msg = bytes.decode()
-  hex = ":".join("{:02x}".format(ord(c)) for c in msg)
+  #msg = bytes.decode()
+  #hex = ":".join("{:02x}".format(ord(c)) for c in msg)
+  hex = ":".join("{:02x}".format(c) for c in bytes)
   return hex
 
 def mopp(speed,msg):
@@ -60,7 +62,7 @@ def mopp(speed,msg):
     if c == " ":
       continue				# spaces not supported by morserino!
 
-    logging.debug(c)
+    #logging.debug(c)
     
     for b in morse[c.lower()]:
       if b == '.':
@@ -79,23 +81,26 @@ def mopp(speed,msg):
     res += chr(int(m[i:i+8],2))
 
   serial += 1
-  return res
+  return bytes(res,'utf-8')
 
 def stripheader(msg):
-  res = chr(0x00) + chr(ord(msg[1]) & 3) + msg[2:]
+  #logging.debug(msg)
+  #logging.debug(type(msg))
+  #res = chr(0x00) + chr(msg[1] & 3) + msg[2:]
+  res = bytes(0x00) + bytes(msg[1] & 3) + msg[2:]
   return res
 
 def welcome(client, speed):
   ip,port = client.split(':')
   welcome_msg = ':hi '+str(len(receivers))
-  serversock.sendto(bytes(mopp(speed, welcome_msg),'utf-8'), (ip, int(port)))
+  serversock.sendto(mopp(speed, welcome_msg), (ip, int(port)))
   receivers[client] = time.time()
   logging.debug("New client: %s" % client)
 
 def reject(client, speed):
   ip,port = client.split(':')
   bye_msg = ':qrl'
-  serversock.sendto(bytes(mopp(speed, bye_msg),'utf-8'), (ip, int(port)))
+  serversock.sendto(mopp(speed, bye_msg), (ip, int(port)))
 
 
 while KeyboardInterrupt:
@@ -103,20 +108,20 @@ while KeyboardInterrupt:
   try:
     data_bytes, addr = serversock.recvfrom(64)
     client = addr[0] + ':' + str(addr[1])
-    data = data_bytes.decode()
-    speed = ord(data[1]) >> 2
+    #data = data_bytes.decode()
+    speed = data_bytes[1] >> 2 #ord(data[1]) >> 2
     logging.debug ("\nReceived %s from %s with %i wpm" % (str2hex(data_bytes),client, speed))
 
     if client in receivers:
-      if stripheader(data) == stripheader(mopp(20,':bye')):
-        serversock.sendto(bytes(mopp(speed,':bye'),'utf-8'), addr)
+      if stripheader(data_bytes) == stripheader(mopp(MY_WPM,':bye')):
+        serversock.sendto(mopp(speed,':bye'), addr)
         del receivers[client]
         logging.debug ("Removing client %s on request" % client)
       else:
-        broadcast (data, client)
+        broadcast (data_bytes, client)
         receivers[client] = time.time()
     else:
-      if stripheader(data) == stripheader(mopp(20,'hi')):
+      if stripheader(data_bytes) == stripheader(mopp(MY_WPM,'hi')):
         if (len(receivers) < MAX_CLIENTS):
           receivers[client] = time.time()
           welcome(client, speed)
@@ -143,8 +148,7 @@ while KeyboardInterrupt:
     if c[1] + CLIENT_TIMEOUT < time.time():
       ip,port = c[0].split(':')
       bye_msg = ':bye'
-      my_speed = 30
-      serversock.sendto(bytes(mopp(my_speed, bye_msg),'utf-8'), (ip, int(port)))
+      serversock.sendto(mopp(MY_WPM, bye_msg), (ip, int(port)))
       del receivers[c[0]]
       logging.debug ("Removing expired client %s" % c[0])
  
