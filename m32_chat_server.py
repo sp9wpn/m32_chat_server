@@ -1,10 +1,10 @@
-#!/usr/local/bin/python2.7
-#
-# https://github.com/sp9wpn/m32_chat_server
-#
+#!/usr/local/bin/python3
 import socket
 import time
+import logging
 from math import ceil
+
+logging.basicConfig(level=logging.DEBUG, format='%(message)s', )
 
 SERVER_IP = "0.0.0.0"
 UDP_PORT = 7373
@@ -21,27 +21,25 @@ receivers = {}
 
 serial = 1
 
-
-def debug(str):
-  if DEBUG:
-    print str
-
-
 def broadcast(data,client):
   for c in receivers.keys():
     if c == client:
       continue
-    debug("Sending to %s" % c)
+    logging.debug("Sending to %s" % c)
     ip,port = c.split(':')
 
     serversock.sendto(data, (ip, int(port)))
 
 
-def str2hex(str):
-  return ":".join("{:02x}".format(ord(c)) for c in str)
+def str2hex(bytes):
+  msg = bytes.decode()
+  hex = ":".join("{:02x}".format(ord(c)) for c in msg)
+  return hex
 
-def mopp(speed,str):
+def mopp(speed,msg):
   global serial
+
+  logging.debug("Encoding message with "+str(speed)+" wpm :"+str(msg))
 
   morse = {
 	"0" : "-----", "1" : ".----", "2" : "..---", "3" : "...--", "4" : "....-", "5" : ".....",
@@ -58,10 +56,12 @@ def mopp(speed,str):
   m += bin(serial)[2:].zfill(6)
   m += bin(speed)[2:].zfill(6)
 
-  for c in str:
+  for c in msg:
     if c == " ":
       continue				# spaces not supported by morserino!
 
+    logging.debug(c)
+    
     for b in morse[c.lower()]:
       if b == '.':
         m += '01'
@@ -81,36 +81,37 @@ def mopp(speed,str):
   serial += 1
   return res
 
-
-def stripheader(str):
-  return chr(0x00) + chr(ord(str[1]) & 3) + str[2:]
+def stripheader(msg):
+  res = chr(0x00) + chr(ord(msg[1]) & 3) + msg[2:]
+  return res
 
 def welcome(client, speed):
   ip,port = client.split(':')
-  serversock.sendto(mopp(speed,':hi '+str(len(receivers))), (ip, int(port)))
+  welcome_msg = ':hi '+str(len(receivers))
+  serversock.sendto(bytes(mopp(speed, welcome_msg),'utf-8'), (ip, int(port)))
   receivers[client] = time.time()
-  debug("New client: %s" % client)
+  logging.debug("New client: %s" % client)
 
 def reject(client, speed):
   ip,port = client.split(':')
-  serversock.sendto(mopp(speed,':qrl'), (ip, int(port)))
+  bye_msg = ':qrl'
+  serversock.sendto(bytes(mopp(speed, bye_msg),'utf-8'), (ip, int(port)))
 
 
 while KeyboardInterrupt:
   time.sleep(0.2)						# anti flood
   try:
-    data, addr = serversock.recvfrom(64)
-
+    data_bytes, addr = serversock.recvfrom(64)
     client = addr[0] + ':' + str(addr[1])
-
-    debug ("\nReceived %s from %s" % (str2hex(data),client))
-
+    data = data_bytes.decode()
     speed = ord(data[1]) >> 2
+    logging.debug ("\nReceived %s from %s with %i wpm" % (str2hex(data_bytes),client, speed))
+
     if client in receivers:
       if stripheader(data) == stripheader(mopp(20,':bye')):
-        serversock.sendto(mopp(speed,':bye'), addr)
+        serversock.sendto(bytes(mopp(speed,':bye'),'utf-8'), addr)
         del receivers[client]
-        debug ("Removing client %s on request" % client)
+        logging.debug ("Removing client %s on request" % client)
       else:
         broadcast (data, client)
         receivers[client] = time.time()
@@ -121,15 +122,15 @@ while KeyboardInterrupt:
           welcome(client, speed)
         else:
           reject(client, speed)
-          debug ("ERR: maximum clients reached")
+          logging.debug ("ERR: maximum clients reached")
       else:
-        debug ("-unknown client, ignoring-")
+        logging.debug ("-unknown client, ignoring-")
 
   except socket.timeout:
     # Send UDP keepalives
     for c in receivers.keys():
       ip,port = c.split(':')
-      serversock.sendto('', (ip, int(port)))
+      serversock.sendto(bytes('','utf-8'), (ip, int(port)))
     pass
 
   except (KeyboardInterrupt, SystemExit):
@@ -137,12 +138,13 @@ while KeyboardInterrupt:
     break
     pass
 
-
   # clean clients list
   for c in receivers.items():
     if c[1] + CLIENT_TIMEOUT < time.time():
       ip,port = c[0].split(':')
-      serversock.sendto(mopp(30,':bye'), (ip, int(port)))
+      bye_msg = ':bye'
+      my_speed = 30
+      serversock.sendto(bytes(mopp(my_speed, bye_msg),'utf-8'), (ip, int(port)))
       del receivers[c[0]]
-      debug ("Removing expired client %s" % c[0])
+      logging.debug ("Removing expired client %s" % c[0])
  
