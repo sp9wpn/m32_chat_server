@@ -17,3 +17,6 @@ Additional features:
  
 **Caution: UDP keepalive messages, while invisible, prevent your Morserino-32 from auto-shutdown!**
 
+# Running the application
+docker build . -t m32_chat_server
+docker run --rm -it -p 7373:7373/udp m32_chat_server
