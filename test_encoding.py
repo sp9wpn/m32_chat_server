@@ -50,9 +50,9 @@ print ("Construct string")
 res = ''
 for i in range (0, len(m), 8):
     res += chr(int(m[i:i+8],2))
-    print (bytes(res,'utf-8'), chr(int(m[i:i+8],2)), int(m[i:i+8],2), m[i:i+8])
+    print (bytes(res,'latin1'), chr(int(m[i:i+8],2)), int(m[i:i+8],2), m[i:i+8])
 
-rr=bytes(res,'utf-8')
+rr=bytes(res,'latin1')
 print (rr, "Encoding complete")
 
 

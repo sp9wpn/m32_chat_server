@@ -77,7 +77,7 @@ while KeyboardInterrupt:
     # Send UDP keepalives
     for c in receivers.keys():
       ip,port = c.split(':')
-      serversock.sendto(bytes('','utf-8'), (ip, int(port)))
+      serversock.sendto(bytes('','latin1'), (ip, int(port)))
     pass
 
   except (KeyboardInterrupt, SystemExit):
