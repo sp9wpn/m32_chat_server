@@ -2,6 +2,7 @@ FROM python:3
 
 WORKDIR /usr/src/app
 COPY m32_chat_server.py ./
+COPY mopp.py ./
 
 EXPOSE 7373/udp
 
