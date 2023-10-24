@@ -82,6 +82,9 @@ class Mopp:
         return self._str2hex(data_bytes)
 
     def decode_message (self, data_bytes):
+        if len(data_bytes) < 1:
+            return {"Keepalive": True}
+        
         speed = data_bytes[1] >> 2 
 
         # Convert symbols to string of 0 and 1 again

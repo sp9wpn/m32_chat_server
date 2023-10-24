@@ -1,7 +1,9 @@
 #!/usr/local/bin/python3
 import socket
 import logging
+import time
 from mopp import * 
+from beep import *
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s', )
 
@@ -15,9 +17,32 @@ client_socket.connect((SERVER_IP, UDP_PORT))  # connect to the server
 
 client_socket.send(mopp.mopp(20,'hi'))
 
-#client_socket.send(mopp.mopp(25,' hello world. this is a small test.'))
-
 data_bytes, addr = client_socket.recvfrom(64)
 client = addr[0] + ':' + str(addr[1])
-speed = mopp.received_speed(data_bytes)
-logging.debug ("\nReceived %s from %s with %i wpm" % (mopp.received_data(data_bytes),client, speed)) 
+r = mopp.decode_message(data_bytes)
+print (r)
+
+b = Beep(speed=r["Speed"])
+
+last_r = {} # keep track of duplicate messages...
+
+while KeyboardInterrupt:
+  time.sleep(0.2)						# anti flood
+  try:
+    data_bytes, addr = client_socket.recvfrom(64)
+    client = addr[0] + ':' + str(addr[1])
+    r = mopp.decode_message(data_bytes)
+    print (r)
+    
+    # Beep if message received
+    if not "Keepalive" in r:
+        if not last_r == r:
+            b.beep_message(r["Message"])
+            last_r = r
+    
+
+
+  except (KeyboardInterrupt, SystemExit):
+    client_socket.close()
+    break
+    pass
