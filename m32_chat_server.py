@@ -51,9 +51,8 @@ while KeyboardInterrupt:
   try:
     data_bytes, addr = serversock.recvfrom(64)
     client = addr[0] + ':' + str(addr[1])
-    #data = data_bytes.decode()
-    speed = data_bytes[1] >> 2 #ord(data[1]) >> 2 # FIXME
-    logging.debug ("\nReceived %s from %s with %i wpm" % (mopp._str2hex(data_bytes),client, speed)) # FIXME
+    speed = mopp.received_speed(data_bytes)
+    logging.debug ("\nReceived %s from %s with %i wpm" % (mopp.received_data(data_bytes),client, speed)) 
 
     if client in receivers:
       if mopp.msg_strcmp(data_bytes, MY_WPM, ':bye'):

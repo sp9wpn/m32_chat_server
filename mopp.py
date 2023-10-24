@@ -63,3 +63,10 @@ class Mopp:
             return True
         else:
             return False
+        
+    def received_speed (self, data_bytes):
+        speed = data_bytes[1] >> 2 
+        return speed
+
+    def received_data (self, data_bytes):
+        return self._str2hex(data_bytes)
