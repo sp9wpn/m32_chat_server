@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+# Receiver for UDP and publish to HiveMQ
 import socket
 import logging
 import time

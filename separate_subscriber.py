@@ -1,3 +1,5 @@
+# Subscriber for HiveMQ with Morse Code Beep
+
 import ssl
 import paho.mqtt.client as paho
 import paho.mqtt.subscribe as subscribe

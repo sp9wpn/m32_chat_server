@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+# Simple transmitter
 import socket
 import logging
 from mopp import * 

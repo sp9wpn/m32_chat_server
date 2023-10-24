@@ -1,4 +1,5 @@
-#!/usr/local/bin/python3
+# Simple receiver
+
 import socket
 import logging
 import time

@@ -1,4 +1,6 @@
 #!/usr/local/bin/python3
+# The MOPP Chat Server (UDP)
+
 import socket
 import time
 import logging
