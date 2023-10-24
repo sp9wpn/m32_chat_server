@@ -3,7 +3,11 @@ import socket
 import logging
 import time
 from mopp import * 
-from beep import *
+import ssl
+from paho import mqtt
+import paho.mqtt.client as paho
+import paho.mqtt.publish as publish
+from hivemq import *
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s', )
 
@@ -17,6 +21,17 @@ client_socket.connect((SERVER_IP, UDP_PORT))  # connect to the server
 
 client_socket.send(mopp.mopp(20,'hi'))
 
+def on_subscribe(client, userdata, mid, granted_qos):
+    print("Subscribed: "+str(mid)+" "+str(granted_qos))
+
+def on_message(client, userdata, msg):
+    print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))    
+
+sslSettings = ssl.SSLContext(mqtt.client.ssl.PROTOCOL_TLS)
+auth = {'username':user, 'password': pw}
+
+
+
 last_r = {} # keep track of duplicate messages...
 
 while KeyboardInterrupt:
@@ -25,17 +40,15 @@ while KeyboardInterrupt:
     data_bytes, addr = client_socket.recvfrom(64)
     client = addr[0] + ':' + str(addr[1])
     r = mopp.decode_message(data_bytes)
-    print (r)
     
-    # Beep if message received
+    # Publish if message received
     if not "Keepalive" in r:
-        b = Beep(speed=r["Speed"])
         if not last_r == r:
-            b.beep_message(r["Message"])
+            print (r)
+            msgs = [{'topic': "m32_test", 'payload': data_bytes}]
+            publish.multiple(msgs, hostname=host, port=8883, auth=auth, tls=sslSettings, protocol=paho.MQTTv31)
             last_r = r
     
-
-
   except (KeyboardInterrupt, SystemExit):
     client_socket.close()
     break

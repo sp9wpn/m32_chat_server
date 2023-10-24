@@ -88,6 +88,7 @@ while KeyboardInterrupt:
 
   # clean clients list
   for c in receivers.items():
+    # FIXME: RuntimeError: dictionary changed size during iteration
     if c[1] + CLIENT_TIMEOUT < time.time():
       ip,port = c[0].split(':')
       bye_msg = ':bye'
