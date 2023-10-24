@@ -89,19 +89,18 @@ class Mopp:
         for l in [data_bytes[i:i+1] for i in range(len(data_bytes))]:
             n += "{:08b}".format(ord(l))
         
-        sym = [n[i:i+2] for i in range(0, len(n), 2)] # list of bit pairs 01, 10, 11, 00
+        # list of bit pairs 01, 10, 11, 00
+        sym = [n[i:i+2] for i in range(0, len(n), 2)] 
         protocol = sym[0]
         serial = int("".join(sym[1:4]),2)
 
+        # Extract message in format ./-/EOC/EOW
         msg = ""
         for i in range (14, len(n), 2):
             s = n[i:i+2]
-            #print (s, self._mopp2morse(s))
             msg += self._mopp2morse(s)
 
-        print ("Decoded: ", "Protocol ", protocol, "Speed", speed, "Serial ", serial, "Msg:", msg, "<EOM>")
-
-        return (protocol, serial, msg)
+        return {"Protocol": protocol, "Serial": serial, "Speed": speed, "Message": msg}
 
 
     def _mopp2morse(self, sym):
@@ -115,8 +114,8 @@ class Mopp:
         elif sym == '11':
             s = 'EOW'
         else:
-            logging.debug ("This should not happen: symbol ", sym[i])
+            logging.debug ("This should not happen: symbol ", s)
         return s
     
     def _morse2txt(self, morse):
-        
+        return
