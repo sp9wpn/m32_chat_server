@@ -52,6 +52,7 @@ while KeyboardInterrupt:
     client = addr[0] + ':' + str(addr[1])
     speed = mopp.received_speed(data_bytes)
     logging.debug ("\nReceived %s from %s with %i wpm" % (mopp.received_data(data_bytes),client, speed)) 
+    mopp.decode_message(data_bytes)
 
     if client in receivers:
       if mopp.msg_strcmp(data_bytes, MY_WPM, ':bye'):

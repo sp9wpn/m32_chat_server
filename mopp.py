@@ -47,8 +47,9 @@ class Mopp:
             m += '00'				# EOC
 
         m = m[0:-2] + '11'			# final EOW
-
         m = m.ljust(int(8*ceil(len(m)/8.0)),'0')
+
+        print (m, " ENCODER") # FIXME
 
         res = ''
         for i in range (0, len(m), 8):
@@ -80,18 +81,20 @@ class Mopp:
         return self._str2hex(data_bytes)
 
     def decode_message (self, data_bytes):
+        speed = data_bytes[1] >> 2 
+
         # Split symbols in an array
         L = [data_bytes[i:i+1] for i in range(len(data_bytes))]
         n = ""
         for l in L:
-            print (l, ord(l), "{:08b}".format(ord(l)))
+            #print (l, ord(l), "{:08b}".format(ord(l)))
             n += "{:08b}".format(ord(l))
         
         sym = [n[i:i+2] for i in range(0, len(n), 2)] # list of bit pairs 01, 10, 11, 00
         protocol = sym[0]
         serial = int("".join(sym[1:4]),2)
         msg = ""
-        for i in range(9, len(sym), 1):
+        for i in range(8, len(sym), 1):
             s = ""
             if sym[i] == '01':
                 s = '.'
@@ -101,6 +104,24 @@ class Mopp:
                 s = 'EOC'
             elif sym[i] == '11':
                 s = 'EOW'
+            else:
+                logging.debug ("This should not happen: symbol ", sym[i])
             msg += s
+        print ("Decoded: ", "Protocol ", protocol, "Speed", speed, "Serial ", serial, sym, "Msg:", msg, "<EOM>")
+
         return (protocol, serial, msg)
 
+
+    def _mopp2morse(self, sym):
+        s = ""
+        if sym == '01':
+            s = '.'
+        elif sym == '10':
+            s = '-'
+        elif sym == '00':
+            s = 'EOC'
+        elif sym == '11':
+            s = 'EOW'
+        else:
+            logging.debug ("This should not happen: symbol ", sym[i])
+        return s
