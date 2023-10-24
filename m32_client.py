@@ -78,4 +78,4 @@ client_socket.connect((SERVER_IP, UDP_PORT))  # connect to the server
 
 client_socket.send(mopp(20,'hi'))
 
-client_socket.send(mopp(20,'das ist ein test hallo'))
+client_socket.send(mopp(20,' hello world. this is a small test.'))
