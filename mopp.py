@@ -12,6 +12,10 @@ class Mopp:
         hex = ":".join("{:02x}".format(c) for c in bytes)
         return hex
 
+    def _str2bin(self, bytes):
+        bincode = "".join("{:08b}".format(c) for c in bytes)
+        return bincode
+
     def mopp(self, speed, msg):
         logging.debug("Encoding message with "+str(speed)+" wpm :"+str(msg))
 
@@ -26,7 +30,7 @@ class Mopp:
             ":" : "---...", "!" : "-.-.--", "'" : ".----."
         }
 
-        m = '01'				# protocol
+        m = '01'				# protocol version
         m += bin(self.serial)[2:].zfill(6)
         m += bin(speed)[2:].zfill(6)
 
@@ -34,7 +38,6 @@ class Mopp:
             if c == " ":
                 continue				# spaces not supported by morserino!
 
-            
             for b in morse[c.lower()]:
                 if b == '.':
                     m += '01'
@@ -64,9 +67,40 @@ class Mopp:
         else:
             return False
         
-    def received_speed (self, data_bytes):
+    def received_speed (self, data_bytes): # FIXME
         speed = data_bytes[1] >> 2 
         return speed
 
-    def received_data (self, data_bytes):
+    def received_serial (self, data_bytes): # FIXME
+        #myserial = data_bytes[0] >> 2 
+        myserial = 0 # FIXME
+        return myserial
+
+    def received_data (self, data_bytes): # TODO
         return self._str2hex(data_bytes)
+
+    def decode_message (self, data_bytes):
+        # Split symbols in an array
+        L = [data_bytes[i:i+1] for i in range(len(data_bytes))]
+        n = ""
+        for l in L:
+            print (l, ord(l), "{:08b}".format(ord(l)))
+            n += "{:08b}".format(ord(l))
+        
+        sym = [n[i:i+2] for i in range(0, len(n), 2)] # list of bit pairs 01, 10, 11, 00
+        protocol = sym[0]
+        serial = int("".join(sym[1:4]),2)
+        msg = ""
+        for i in range(9, len(sym), 1):
+            s = ""
+            if sym[i] == '01':
+                s = '.'
+            elif sym[i] == '10':
+                s = '-'
+            elif sym[i] == '00':
+                s = 'EOC'
+            elif sym[i] == '11':
+                s = 'EOW'
+            msg += s
+        return (protocol, serial, msg)
+
