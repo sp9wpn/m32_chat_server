@@ -14,3 +14,4 @@ client_socket.connect((config.SERVER_IP, config.UDP_PORT))  # connect to the ser
 client_socket.send(mopp.mopp(20,'hi'))
 
 client_socket.send(mopp.mopp(30,' hello world. this is a small test.'))
+client_socket.send(mopp.mopp(10,'ok'))

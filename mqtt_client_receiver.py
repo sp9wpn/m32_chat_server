@@ -1,27 +1,21 @@
-# Subscriber for HiveMQ with Morse Code Beep
+#!/usr/local/bin/python3
+# Subscriber for MQTT with Morse Code Beep
 
-import ssl
 import paho.mqtt.client as paho
-import paho.mqtt.subscribe as subscribe
-from paho import mqtt
-from hivemq import *
+import config
 
 from mopp import * 
 from beep import *
 
 mopp = Mopp()
 
-# callback to print a message once it arrives
-def print_msg(client, userdata, message):
-    """
-        Prints a mqtt message to stdout ( used as callback for subscribe )
+def on_connect(mqttc, obj, flags, rc):
+    print("rc: " + str(rc))
 
-        :param client: the client itself
-        :param userdata: userdata is set when initiating the client, here it is userdata=None
-        :param message: the message with topic and payload
-    """
-    print("%s : %s" % (message.topic, message.payload))
-    r = mopp.decode_message(message.payload)
+def on_message(mqttc, obj, msg):
+    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+
+    r = mopp.decode_message(msg.payload)
     print (r)
 
     # Beep if message received
@@ -29,10 +23,24 @@ def print_msg(client, userdata, message):
         b = Beep(speed=r["Speed"])
         b.beep_message(r["Message"])
 
+def on_publish(mqttc, obj, mid):
+    print("mid: " + str(mid))
+
+def on_subscribe(mqttc, obj, mid, granted_qos):
+    print("Subscribed: " + str(mid) + " " + str(granted_qos))
+
+def on_log(mqttc, obj, level, string):
+    print(string)
 
 
-sslSettings = ssl.SSLContext(mqtt.client.ssl.PROTOCOL_TLS)
-auth = {'username': user, 'password': pw}
-subscribe.callback(print_msg, "#", hostname=host, port=8883, auth=auth, tls=sslSettings, protocol=paho.MQTTv31)
+mqttc = paho.Client()
 
+mqttc.on_message = on_message
+mqttc.on_connect = on_connect
+mqttc.on_publish = on_publish
+mqttc.on_subscribe = on_subscribe
 
+mqttc.connect(config.MQTT_HOST, config.MQTT_PORT, 60)
+mqttc.subscribe("m32_test", 0)
+
+mqttc.loop_forever()

@@ -20,3 +20,7 @@ Additional features:
 # Running the application
 docker build . -t m32_chat_server
 docker run --rm -it -p 7373:7373/udp m32_chat_server
+
+# Scrapboook
+mosquitto_sub -h broker.hivemq.com -p 1883 -t m32_test
+

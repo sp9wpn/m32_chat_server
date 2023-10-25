@@ -1,9 +1,10 @@
 FROM python:3
 
 WORKDIR /usr/src/app
-COPY m32_chat_server.py ./
+COPY udp_chat_server.py ./
 COPY mopp.py ./
+COPY config.py ./
 
 EXPOSE 7373/udp
 
-CMD [ "python3", "./m32_chat_server.py"]
+CMD [ "python3", "./udp_chat_server.py"]

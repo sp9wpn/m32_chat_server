@@ -1,13 +1,12 @@
+#!/usr/local/bin/python3
 # Receiver for UDP and publish to MQTT
 import socket
 import logging
 import time
 from mopp import * 
-import ssl
 from paho import mqtt
 import paho.mqtt.client as paho
 import paho.mqtt.publish as publish
-from hivemq import *
 import config
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s', )
@@ -25,10 +24,6 @@ def on_subscribe(client, userdata, mid, granted_qos):
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))    
 
-sslSettings = ssl.SSLContext(mqtt.client.ssl.PROTOCOL_TLS)
-auth = {'username':user, 'password': pw}
-
-
 
 last_r = {} # keep track of duplicate messages...
 
@@ -44,7 +39,7 @@ while KeyboardInterrupt:
         if not last_r == r:
             print (r)
             msgs = [{'topic': "m32_test", 'payload': data_bytes}]
-            publish.multiple(msgs, hostname=host, port=8883, auth=auth, tls=sslSettings, protocol=paho.MQTTv31)
+            publish.multiple(msgs, hostname=config.MQTT_HOST, port=config.MQTT_PORT, protocol=paho.MQTTv31)
             last_r = r
     
   except (KeyboardInterrupt, SystemExit):
