@@ -5,16 +5,15 @@ import logging
 import time
 from mopp import * 
 from beep import *
+import config
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s', )
 
-SERVER_IP = "0.0.0.0"
-UDP_PORT = 7373
 
 mopp = Mopp()
 
 client_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-client_socket.connect((SERVER_IP, UDP_PORT))  # connect to the server
+client_socket.connect((config.SERVER_IP, config.UDP_PORT))  # connect to the server
 
 client_socket.send(mopp.mopp(20,'hi'))
 

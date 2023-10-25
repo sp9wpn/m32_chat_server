@@ -5,20 +5,13 @@ import socket
 import time
 import logging
 from mopp import * 
+import config
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s', )
 
-SERVER_IP = "0.0.0.0"
-UDP_PORT = 7373
-CLIENT_TIMEOUT = 300
-MAX_CLIENTS = 10
-KEEPALIVE = 10
-DEBUG = 0
-MY_WPM = 20
-
 serversock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-serversock.bind((SERVER_IP, UDP_PORT))
-serversock.settimeout(KEEPALIVE)
+serversock.bind((config.SERVER_IP, config.UDP_PORT))
+serversock.settimeout(config.KEEPALIVE)
 
 receivers = {}
 mopp = Mopp()
@@ -58,7 +51,7 @@ while KeyboardInterrupt:
     print (r)
 
     if client in receivers:
-      if mopp.msg_strcmp(data_bytes, MY_WPM, ':bye'):
+      if mopp.msg_strcmp(data_bytes, config.CHAT_WPM, ':bye'):
         serversock.sendto(mopp.mopp(speed,':bye'), addr) # FIXME
         del receivers[client]
         logging.debug ("Removing client %s on request" % client)
@@ -66,8 +59,8 @@ while KeyboardInterrupt:
         broadcast (data_bytes, client)
         receivers[client] = time.time()
     else:
-      if mopp.msg_strcmp(data_bytes, MY_WPM, 'hi'):
-        if (len(receivers) < MAX_CLIENTS):
+      if mopp.msg_strcmp(data_bytes, config.CHAT_WPM, 'hi'):
+        if (len(receivers) < config.MAX_CLIENTS):
           receivers[client] = time.time()
           welcome(client, speed)
         else:
@@ -91,10 +84,10 @@ while KeyboardInterrupt:
   # clean clients list
   for c in receivers.items():
     # FIXME: RuntimeError: dictionary changed size during iteration
-    if c[1] + CLIENT_TIMEOUT < time.time():
+    if c[1] + config.CLIENT_TIMEOUT < time.time():
       ip,port = c[0].split(':')
       bye_msg = ':bye'
-      transmit(mopp.mopp(MY_WPM, bye_msg), ip, int(port))
+      transmit(mopp.mopp(config.CHAT_WPM, bye_msg), ip, int(port))
       del receivers[c[0]]
       logging.debug ("Removing expired client %s" % c[0])
  
