@@ -1,5 +1,5 @@
 # Configuration for UDP connections
-SERVER_IP = "0.0.0.0"
+SERVER_IP = "10.101.101.14" #"0.0.0.0"
 UDP_PORT = 7373
 
 # Configuration for Chat Server
