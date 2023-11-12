@@ -7,7 +7,3 @@ CLIENT_TIMEOUT = 3000
 MAX_CLIENTS = 100
 KEEPALIVE = 10
 CHAT_WPM = 20
-
-# MQTT configuration
-MQTT_HOST = "broker.hivemq.com"
-MQTT_PORT = 1883
