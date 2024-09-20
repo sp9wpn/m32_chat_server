@@ -5,6 +5,20 @@ from math import ceil
 class Mopp:
     serial = 1
 
+    morse = {
+            "0" : "-----", "1" : ".----", "2" : "..---", "3" : "...--", "4" : "....-", "5" : ".....",
+            "6" : "-....", "7" : "--...", "8" : "---..", "9" : "----.",
+            "a" : ".-", "b" : "-...", "c" : "-.-.", "d" : "-..", "e" : ".", "f" : "..-.", "g" : "--.",
+            "h" : "....", "i" : "..", "j" : ".---", "k" : "-.-", "l" : ".-..", "m" : "--", "n" : "-.",
+            "o" : "---", "p" : ".--.", "q" : "--.-", "r" : ".-.", "s" : "...", "t" : "-", "u" : "..-",
+            "v" : "...-", "w" : ".--", "x" : "-..-", "y" : "-.--", "z" : "--..", "=" : "-...-",
+            "/" : "-..-.", "+" : ".-.-.", "-" : "-....-", "." : ".-.-.-", "," : "--..--", "?" : "..--..",
+            ":" : "---...", "!" : "-.-.--", "'" : ".----."
+    }
+
+    morse_inv = {v: k for k, v in morse.items()}
+
+
     def __init__(self, speed = 20):
         self.speed = speed
         return
@@ -17,35 +31,33 @@ class Mopp:
         bincode = "".join("{:08b}".format(c) for c in bytes)
         return bincode
 
-    def mopp(self, speed, msg):
-        logging.debug("Encoding message with "+str(speed)+" wpm :"+str(msg))
-
-        morse = {
-            "0" : "-----", "1" : ".----", "2" : "..---", "3" : "...--", "4" : "....-", "5" : ".....",
-            "6" : "-....", "7" : "--...", "8" : "---..", "9" : "----.",
-            "a" : ".-", "b" : "-...", "c" : "-.-.", "d" : "-..", "e" : ".", "f" : "..-.", "g" : "--.",
-            "h" : "....", "i" : "..", "j" : ".---", "k" : "-.-", "l" : ".-..", "m" : "--", "n" : "-.",
-            "o" : "---", "p" : ".--.", "q" : "--.-", "r" : ".-.", "s" : "...", "t" : "-", "u" : "..-",
-            "v" : "...-", "w" : ".--", "x" : "-..-", "y" : "-.--", "z" : "--..", "=" : "-...-",
-            "/" : "-..-.", "+" : ".-.-.", "-" : "-....-", "." : ".-.-.-", "," : "--..--", "?" : "..--..",
-            ":" : "---...", "!" : "-.-.--", "'" : ".----."
-        }
+    def mopp(self, speed, msg, for_transmission = True):
 
         m = '01'				# protocol version
         m += bin(self.serial)[2:].zfill(6)
         m += bin(speed)[2:].zfill(6)
 
+        _txt = ''
+
         for c in msg:
             if c == " ":
                 continue				# spaces not supported by morserino!
 
-            for b in morse[c.lower()]:
+            if c.lower() not in self.morse:
+                continue				# unknown character
+
+            _txt += c.lower()
+            for b in self.morse[c.lower()]:
                 if b == '.':
                     m += '01'
                 else:
                     m += '10'
 
             m += '00'				# EOC
+
+        if len(m) <= 14:			# empty message
+          return bytes('','latin_1')
+
 
         m = m[0:-2] + '11'			# final EOW
         m = m.ljust(int(8*ceil(len(m)/8.0)),'0')
@@ -57,7 +69,12 @@ class Mopp:
             #print (m[i:i+8], bytes(chr(int(m[i:i+8],2)),"latin_1"), i, " ENCODER")
             res += chr(int(m[i:i+8],2))
 
-        self.serial += 1
+        if for_transmission:
+          logging.debug("Encoding message with "+str(speed)+" wpm: "+str(_txt))
+          self.serial += 1
+          if self.serial >= 64:
+            self.serial = 0
+
         return bytes(res,'latin_1') # WATCH OUT: UNICODE MAKES MULTI-BYTES 
 
     def _stripheader(self, msg):
@@ -65,7 +82,7 @@ class Mopp:
         return res
 
     def msg_strcmp (self, data_bytes, speed, msg):
-        if self._stripheader(data_bytes) == self._stripheader(self.mopp(speed, msg)):
+        if self._stripheader(data_bytes) == self._stripheader(self.mopp(speed, msg, False)):
             return True
         else:
             return False
@@ -104,7 +121,9 @@ class Mopp:
             s = n[i:i+2]
             msg += self._mopp2morse(s)
 
-        return {"Protocol": protocol, "Serial": serial, "Speed": speed, "Message": msg}
+        txt = self._morse2txt(msg)
+
+        return {"Protocol": protocol, "Serial": serial, "Speed": speed, "Message": msg, "Text": txt}
 
 
     def _mopp2morse(self, sym):
@@ -121,5 +140,19 @@ class Mopp:
             logging.debug ("This should not happen: symbol ", s)
         return s
     
-    def _morse2txt(self, morse):
-        return
+    def _morse2txt(self, ditcode):
+        s = ""
+        for word in ditcode.split("EOW"):
+          if word == '':
+            continue
+          for letter in word.split("EOC"):
+            if letter == '':
+              continue
+            if letter in self.morse_inv:
+              s += self.morse_inv[letter]
+            else:
+              s += "<" + letter + ">"
+
+          s += " "
+
+        return s.strip()
